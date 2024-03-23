@@ -4,15 +4,13 @@ import cookieParser from "cookie-parser";
 import logger from "morgan";
 import cors from "cors";
 import { simpleGit } from "simple-git";
+import { env } from "./env";
 
 import { generate } from "./utils";
+import { getAllFiles } from "./file";
 
 // Create Express server.
 const app = express();
-
-// Get port from environment and store in Express.
-const port = process.env.PORT || 3000;
-app.set("port", port);
 
 // Middleware
 app.use(logger("dev"));
@@ -43,8 +41,14 @@ app.post("/deploy", async (req, res) => {
 
   try {
     // Clone the repo
-    await git.clone(repoUrl, `./output/${id}`);
+    await git.clone(repoUrl, path.join(__dirname, `./output/${id}`));
     res.json({ message: `Cloning Repo successful. ID: ${id}` });
+
+    // Put repo in S3
+    const files = await getAllFiles(path.join(__dirname, `./output/${id}`));
+    console.log(files);
+
+    //
   } catch (e) {
     // handle all errors here
     console.log(e);
@@ -55,6 +59,6 @@ app.post("/deploy", async (req, res) => {
 });
 
 // Start Express server.
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+app.listen(env.PORT, () => {
+  console.log(`Server running on port ${env.PORT}`);
 });
