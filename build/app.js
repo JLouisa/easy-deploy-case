@@ -18,12 +18,12 @@ const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const morgan_1 = __importDefault(require("morgan"));
 const cors_1 = __importDefault(require("cors"));
 const simple_git_1 = require("simple-git");
+const env_1 = require("./env");
 const utils_1 = require("./utils");
+const file_1 = require("./file");
+const aws_1 = require("./aws");
 // Create Express server.
 const app = (0, express_1.default)();
-// Get port from environment and store in Express.
-const port = process.env.PORT || 3000;
-app.set("port", port);
 // Middleware
 app.use((0, morgan_1.default)("dev"));
 app.use((0, cors_1.default)());
@@ -45,20 +45,32 @@ app.post("/deploy", (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     const id = (0, utils_1.generate)();
     // Initialize simple-git
     const git = (0, simple_git_1.simpleGit)();
+    // Create output directory
+    const outputDir = (0, utils_1.getOutputDir)();
+    const outputDirId = outputDir.concat(`/${id}`);
     try {
         // Clone the repo
-        yield git.clone(repoUrl, `./output/${id}`);
-        res.json({ message: `Deployed... ${repoUrl}` });
+        yield git.clone(repoUrl, outputDirId);
+        // Put repo in S3
+        const files = (0, file_1.getAllFiles)(outputDirId);
+        console.log(files);
+        // uploadFile(file, file);
+        files.forEach((file) => __awaiter(void 0, void 0, void 0, function* () {
+            console.log("output/".concat(file.slice(outputDir.length + 1)));
+            const thePath = "output/".concat(file.slice(outputDir.length + 1));
+            yield (0, aws_1.uploadFile)(thePath, file);
+        }));
     }
     catch (e) {
         // handle all errors here
         console.log(e);
         res.json({
-            message: `Something went wrong getting git repo... ${repoUrl}`,
+            message: `Something went wrong getting github repo... ${repoUrl}`,
         });
     }
+    res.json({ message: `Cloning Repo successful. ID: ${id}` });
 }));
 // Start Express server.
-app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+app.listen(env_1.env.PORT, () => {
+    console.log(`Server running on port ${env_1.env.PORT}`);
 });

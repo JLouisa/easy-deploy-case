@@ -4,17 +4,18 @@
   "private": true,
   "scripts": {
     "start": "node ./build/app.js",
-    "dev": "nodemon ./src/app.ts",
+    "dev": "nodemon --ignore output ./src/app.ts",
     "build": "tsc"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.540.0",
+    "@aws-sdk/s3-request-presigner": "^3.540.0",
     "aws-sdk": "^2.1584.0",
     "cookie-parser": "~1.4.4",
     "cors": "^2.8.5",
     "debug": "~2.6.9",
-    "express": "~4.16.1",
+    "express": "^4.19.1",
     "http-errors": "~1.6.3",
-    "jade": "~1.11.0",
     "morgan": "~1.9.1",
     "redis": "^4.6.13",
     "simple-git": "^3.23.0",
