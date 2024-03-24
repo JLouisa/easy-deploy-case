@@ -10,6 +10,13 @@ import { generate, getOutputDir } from "./utils";
 import { getAllFiles } from "./file";
 import { uploadFile } from "./aws";
 
+import { createClient } from "redis";
+
+const redis = createClient().on("error", (err) =>
+  console.log("Redis Client Error", err)
+);
+redis.connect();
+
 // Create Express server.
 const app = express();
 
@@ -52,13 +59,6 @@ app.post("/deploy", async (req, res) => {
     const files = getAllFiles(outputDirId);
     console.log(files);
 
-    // uploadFile(file, file);
-    // files.forEach(async (file) => {
-    //   console.log("output/".concat(file.slice(outputDir.length + 1)));
-    //   const thePath = "output/".concat(file.slice(outputDir.length + 1));
-    //   await uploadFile(thePath, file);
-    // });
-
     // Assuming uploadFile returns a Promise
     const uploadPromises = files.map(async (file) => {
       const filePath = "output/" + file.slice(outputDir.length + 1);
@@ -81,6 +81,7 @@ app.post("/deploy", async (req, res) => {
       message: `Something went wrong getting github repo... ${repoUrl}`,
     });
   } finally {
+    redis.lPush("build-queue", id);
     res.json({ message: `Cloning Repo successful. ID: ${id}` });
   }
 });
