@@ -2,12 +2,21 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { env } from "./env";
 import fs from "fs";
 
+// const s3 = new S3Client({
+//   region: "auto",
+//   endpoint: env.CLOUDFLARE_R2_ENDPOINT,
+//   credentials: {
+//     accessKeyId: env.CLOUDFLARE_R2_ACCESS_KEY_ID,
+//     secretAccessKey: env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+//   },
+// });
+
 const s3 = new S3Client({
-  region: "auto",
-  endpoint: env.CLOUDFLARE_R2_ENDPOINT,
+  region: env.AWS_REGION,
+  // endpoint: env.CLOUDFLARE_R2_ENDPOINT,
   credentials: {
-    accessKeyId: env.CLOUDFLARE_R2_ACCESS_KEY_ID,
-    secretAccessKey: env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+    accessKeyId: env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
   },
 });
 
