@@ -22,6 +22,13 @@ const env_1 = require("./env");
 const utils_1 = require("./utils");
 const file_1 = require("./file");
 const aws_1 = require("./aws");
+const redis_1 = require("redis");
+// Redis client - for writing
+const redis = (0, redis_1.createClient)().on("error", (err) => console.log("Redis Client Error", err));
+redis.connect();
+// Redis DB - for reading
+const redisDB = (0, redis_1.createClient)().on("error", (err) => console.log("Redis Client Error", err));
+redisDB.connect();
 // Create Express server.
 const app = (0, express_1.default)();
 // Middleware
@@ -54,12 +61,21 @@ app.post("/deploy", (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         // Put repo in S3
         const files = (0, file_1.getAllFiles)(outputDirId);
         console.log(files);
-        // uploadFile(file, file);
-        files.forEach((file) => __awaiter(void 0, void 0, void 0, function* () {
-            console.log("output/".concat(file.slice(outputDir.length + 1)));
-            const thePath = "output/".concat(file.slice(outputDir.length + 1));
-            yield (0, aws_1.uploadFile)(thePath, file);
+        // Assuming uploadFile returns a Promise
+        const uploadPromises = files.map((file) => __awaiter(void 0, void 0, void 0, function* () {
+            const filePath = "output/" + file.slice(outputDir.length + 1);
+            try {
+                yield (0, aws_1.uploadFile)(filePath, file);
+                console.log(`File ${file} uploaded successfully.`);
+            }
+            catch (error) {
+                console.error(`Error uploading file ${file}:`, error);
+                // Handle error as needed
+            }
         }));
+        // Wait for all uploads to complete
+        yield Promise.all(uploadPromises);
+        console.log("All files uploaded successfully.");
     }
     catch (e) {
         // handle all errors here
@@ -68,7 +84,23 @@ app.post("/deploy", (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             message: `Something went wrong getting github repo... ${repoUrl}`,
         });
     }
-    res.json({ message: `Cloning Repo successful. ID: ${id}` });
+    finally {
+        // Add the id to the build queue
+        redis.lPush("build-queue", id);
+        // Set the status of the id to uploaded
+        redis.hSet("status", id, "uploaded");
+        res.json({ id, message: `Cloning Repo successful. ID: ${id}` });
+    }
+}));
+// Get the status of the id
+app.get("/status/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const id = req.params.id;
+    // Get the status of the id
+    const status = yield redisDB.hGet("status", id);
+    if (!status) {
+        return res.json({ message: "ID not found" });
+    }
+    res.json({ id, status });
 }));
 // Start Express server.
 app.listen(env_1.env.PORT, () => {

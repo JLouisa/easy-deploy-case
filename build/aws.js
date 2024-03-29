@@ -13,24 +13,44 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.uploadFile = void 0;
-const aws_sdk_1 = require("aws-sdk");
+const client_s3_1 = require("@aws-sdk/client-s3");
 const env_1 = require("./env");
 const fs_1 = __importDefault(require("fs"));
-const s3 = new aws_sdk_1.S3({
-    accessKeyId: env_1.env.CLOUDFLARE_R2_ACCESS_KEY_ID,
-    secretAccessKey: env_1.env.CLOUDFLARE_R2_TOKEN_VALUE,
-    endpoint: env_1.env.CLOUDFLARE_R2_EU_ENDPOINT,
+// const s3 = new S3Client({
+//   region: "auto",
+//   endpoint: env.CLOUDFLARE_R2_ENDPOINT,
+//   credentials: {
+//     accessKeyId: env.CLOUDFLARE_R2_ACCESS_KEY_ID,
+//     secretAccessKey: env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+//   },
+// });
+const s3 = new client_s3_1.S3Client({
+    region: env_1.env.AWS_REGION,
+    // endpoint: env.CLOUDFLARE_R2_ENDPOINT,
+    credentials: {
+        accessKeyId: env_1.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: env_1.env.AWS_SECRET_ACCESS_KEY,
+    },
 });
 const uploadFile = (fileName, localFilePath) => __awaiter(void 0, void 0, void 0, function* () {
     console.log("Called");
-    const fileContent = fs_1.default.readFileSync(localFilePath);
-    const response = yield s3
-        .upload({
-        Body: fileContent,
+    // Create a readable stream from the local file
+    const fileStream = fs_1.default.createReadStream(localFilePath);
+    // Configure S3 parameters
+    const params = {
         Bucket: env_1.env.BUCKET_NAME,
         Key: fileName,
-    })
-        .promise();
-    console.log(response);
+        Body: fileStream,
+    };
+    const command = new client_s3_1.PutObjectCommand(params);
+    // Upload the file asynchronously
+    try {
+        const response = yield s3.send(command);
+        console.log(response);
+    }
+    catch (error) {
+        console.error("Error uploading file:", error);
+        throw error; // Re-throw the error for handling upstream
+    }
 });
 exports.uploadFile = uploadFile;
